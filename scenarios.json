@@ -1,0 +1,10 @@
+{
+    "scenario1": {
+        "source": "123456",
+        "dst": "123457",
+        "when": "5s",
+        "content": " long string! ",
+        "numberOfChunks": 5
+    },
+    "scenarios": ["scenario1"]
+}
