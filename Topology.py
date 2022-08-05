@@ -12,6 +12,7 @@ class Topo:
         self.mme = MME(mme_port, sgw_port)
         self.sgw = SGW(max_entry, sgw_port, mme_port)
         self.enbs = []
+        self.enb_signaling_ports = []
         self.add_enbs(enb_file_path, mme_port, sgw_port)
         self.users = []
         self.add_users(user_file_path)
@@ -24,6 +25,7 @@ class Topo:
         for i, coordinate_str in enumerate(data["eNodeBsLocation"]):
             coordinate = tuple(map(int, coordinate_str[1:-1].split(', ')))
             uid = str(int((i+1)*20000/number_of_enbs))
+            self.enb_signaling_ports.append(int(uid))
             self.enbs.append(ENB(uid, coordinate, mme_port, sgw_port))
 
     def add_users(self, file_path): # this function create users from json input file
@@ -35,7 +37,17 @@ class Topo:
             locations = []
             for location in user_data["locations"]:
                 locations.append(tuple(map(int, location[1:-1].split(', '))))
-            self.users.append(User(user_data["id"], user_data["interval"], locations))
+            self.users.append(User(user_data["id"], user_data["interval"], locations, self.enb_signaling_ports))
+
+    def start_servers(self): # this function starts servers on ENBs, MME and SGW
+        t1 = threading.Thread(target=self.mme.start_server)
+        t2 = threading.Thread(target=self.sgw.start_server)
+        t1.start()
+        t2.start()
+        for enb in self.enbs:
+            t = threading.Thread(target=enb.start_server)
+            t.start()
+
 
     def send_uid_to_mme_sgw(self): # this function sends uids of the ENBs to MME and SGW
         threads = []
