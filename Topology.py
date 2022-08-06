@@ -1,6 +1,7 @@
 import socket
 import threading
 import json
+from prefixed import Float
 from ENB import ENB
 from MME import MME
 from SGW import SGW
@@ -16,6 +17,7 @@ class Topo:
         self.add_enbs(enb_file_path, mme_port, sgw_port)
         self.users = []
         self.add_users(user_file_path)
+        self.start_servers()
 
 
     def add_enbs(self, file_path, mme_port, sgw_port): # this function create enbs from json input file
@@ -37,7 +39,7 @@ class Topo:
             locations = []
             for location in user_data["locations"]:
                 locations.append(tuple(map(int, location[1:-1].split(', '))))
-            self.users.append(User(user_data["id"], user_data["interval"], locations, self.enb_signaling_ports))
+            self.users.append(User(user_data["id"], Float(user_data["interval"][:-1]), locations, self.enb_signaling_ports))
 
     def start_servers(self): # this function starts servers on ENBs, MME and SGW
         t1 = threading.Thread(target=self.mme.start_server)

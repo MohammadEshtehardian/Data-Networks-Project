@@ -1,4 +1,6 @@
+from math import floor
 import socket
+import threading
 import json
 
 class User:
@@ -8,33 +10,37 @@ class User:
         self.interval = interval
         self.locations = locations
         self.enb_signaling_ports = enb_signaling_ports
-        self.signaling_connection = False
         self.enb_signaling_sockets = []
+        self.announced_locations = []
+        self.lock = threading.Lock()
         for port in self.enb_signaling_ports:
             self.enb_signaling_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
 
     def __str__(self):
         return f"user id is: {self.id}\nuser interval is: {self.interval}\nuser locations is: {self.locations}"
 
-    def connect(self):
+    def connect(self, e):
         for i, port in enumerate(self.enb_signaling_ports):
             self.enb_signaling_sockets[i].connect(('127.0.0.1', port))
+        e.set()
 
-    def position_announcement(self):
-
-        if not self.signaling_connection:
-            self.connect()
-            self.signaling_connection = True
-
-        for s in self.enb_signaling_sockets:
-            data = {
-                "header":{
-                    "kind": "Position Announcement"
-                },
-                "payload":{
-                    "uid": self.id,
-                    "coordinate": self.locations[0]
+    def position_announcement(self, time, e):
+        e.wait()
+        self.lock.acquire()
+        ind = floor(time/self.interval) # index of the location that should be announced
+        if not ind >= len(self.locations) and ind not in self.announced_locations:
+            self.announced_locations.append(ind)
+            for s in self.enb_signaling_sockets:
+                data = {
+                    "header":{
+                        "kind": "Position Announcement",
+                        "time": time
+                    },
+                    "payload":{
+                        "uid": self.id,
+                        "coordinate": self.locations[ind]
+                    }
                 }
-            }
-            data = json.dumps(data)
-            s.sendall(bytes(data, encoding='utf-8'))
+                data = json.dumps(data)
+                s.sendall(bytes(data, encoding='utf-8'))
+        self.lock.release()
