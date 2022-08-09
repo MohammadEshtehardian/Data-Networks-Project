@@ -1,6 +1,7 @@
 import socket
 import json
 from threading import Thread
+import logging
 
 class SGW:
 
@@ -23,14 +24,20 @@ class SGW:
             if data["header"]["kind"] == "eNodeB-SGW Connection":
                 uid = data["payload"]["uid"]
                 self.enb_uids.append(uid)
+                logging.info(f'SGW added eNodeB with uid {uid} to its eNodebs list.')
 
     def start_server(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', self.port))
         s.listen()
+        logging.critical(f'Server of SGW started on port {self.port}.')
         while True:
             c, addr = s.accept()
             Thread(target=self.ENB_SGW_connection, args=(c,)).start()
     
     def connect_mme(self):
-        self.mme_socket.connect(('127.0.0.1', self.mme_port))
+        try:
+            self.mme_socket.connect(('127.0.0.1', self.mme_port))
+            logging.critical('SGW connected to MME.')
+        except:
+            logging.error('SGW cannot connect to MME!!!')

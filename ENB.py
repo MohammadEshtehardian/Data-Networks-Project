@@ -1,12 +1,12 @@
 import socket
 import json
 from threading import Thread
+import logging
 
 class ENB:
 
     def __init__(self, uid, coordinate, mme_port, sgw_port):
         self.uid = uid
-        self.time = 0
         self.buffer = []
         self.users = {}
         self.coordinate = coordinate
@@ -30,6 +30,7 @@ class ENB:
         }
         data = json.dumps(data)
         self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+        logging.critical(f'eNodeB with UID {self.uid} connected to MME.')
 
     def ENB_SGW_connection(self):
         self.sgw_socket.connect(('127.0.0.1', self.sgw_port))
@@ -43,6 +44,7 @@ class ENB:
         }
         data = json.dumps(data)
         self.sgw_socket.sendall(bytes(data, encoding='utf-8'))
+        logging.critical(f'eNodeB with UID {self.uid} connected to SGW.')
 
     def position_announcement(self, c):
         while True:
@@ -52,7 +54,8 @@ class ENB:
                 uid = data["payload"]["uid"]
                 coordinate = data["payload"]["coordinate"]
                 self.users[uid] = coordinate
-            self.time = data["header"]["time"]
+                time = data["header"]["time"]
+                logging.info(f'eNodeB with uid {self.uid} got position of user with id {uid} at time {time}.')
             
 
     def start_server(self):
@@ -60,6 +63,7 @@ class ENB:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', port))
         s.listen()
+        logging.critical(f'Server of eNodeB with uid {self.uid} started on port {port}.')
         while True:
             c, addr = s.accept()
             Thread(target=self.position_announcement, args=(c,)).start()

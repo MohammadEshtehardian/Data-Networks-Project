@@ -1,6 +1,8 @@
 from Topology import Topo
 import threading
 import time
+import logging
+import sys
 
 class Simulation:
 
@@ -12,12 +14,14 @@ class Simulation:
             e = threading.Event()
             threading.Thread(target=user.connect, args=(e,)).start()
             events.append(e)
-        t = 0
-        while t <= T:
+        t0 = time.time()
+        while time.time() - t0 <= T:
             for i, user in enumerate(topo.users):
-                threading.Thread(target=user.position_announcement, args=(t, events[i])).start()
-            t += dt
+                threading.Thread(target=user.position_announcement, args=(time.time()-t0, events[i])).start()
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2 and sys.argv[1]=='INFO':
+        logging.basicConfig(level = logging.INFO,
+                            format = '%(levelname)s:%(message)s')
     Simulation(1e4, 1, 1, 'ENB.json', 'Users1.json')

@@ -2,6 +2,7 @@ from math import floor
 import socket
 import threading
 import json
+import logging
 
 class User:
 
@@ -22,6 +23,7 @@ class User:
     def connect(self, e):
         for i, port in enumerate(self.enb_signaling_ports):
             self.enb_signaling_sockets[i].connect(('127.0.0.1', port))
+            logging.critical(f'User with id {self.id} connected to eNodeB on port {port}.')
         e.set()
 
     def position_announcement(self, time, e):
