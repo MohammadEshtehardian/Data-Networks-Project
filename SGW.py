@@ -12,12 +12,13 @@ class SGW:
         self.max_entry = max_entry
         self.port = port
         self.mme_port = mme_port
-        self.mme_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.mme_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # socket for connecting to MME
 
     def __str__(self):
         return f"ENBs are: {self.uids}\nMaximum number of entries in the routing table is: {self.max_entry}\nRouting Table:\n{self.routing_table}"
 
     def ENB_SGW_connection(self, c):
+        # handling messages for connections from ENBs
         while True:
             data = str(c.recv(4096), 'utf-8')
             data = json.loads(data)
@@ -27,6 +28,7 @@ class SGW:
                 logging.info(f'SGW added eNodeB with uid {uid} to its eNodebs list.')
 
     def start_server(self):
+        # starting server
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(('', self.port))
         s.listen()
@@ -36,6 +38,7 @@ class SGW:
             Thread(target=self.ENB_SGW_connection, args=(c,)).start()
     
     def connect_mme(self):
+        # connect to MME
         try:
             self.mme_socket.connect(('127.0.0.1', self.mme_port))
             logging.critical('SGW connected to MME.')

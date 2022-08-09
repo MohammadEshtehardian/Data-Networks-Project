@@ -39,7 +39,7 @@ class User:
                         "time": time
                     },
                     "payload":{
-                        "uid": self.id,
+                        "id": self.id,
                         "coordinate": self.locations[ind]
                     }
                 }
