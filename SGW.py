@@ -5,7 +5,8 @@ import logging
 
 class SGW:
 
-    def __init__(self, max_entry, port, mme_port):
+    def __init__(self, max_entry, port, mme_port, t0):
+        self.t0 = t0
         self.buffer = []
         self.enb_uids = []
         self.routing_table = {}

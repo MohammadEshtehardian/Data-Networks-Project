@@ -9,15 +9,16 @@ from User import User
 
 class Topo:
 
-    def __init__(self, max_entry, enb_file_path, user_file_path, t0, mme_port=65535, sgw_port=65000):
-        self.mme = MME(mme_port, sgw_port)
-        self.sgw = SGW(max_entry, sgw_port, mme_port)
+    def __init__(self, max_entry, enb_file_path, user_file_path, scenario_file_path, t0, mme_port=65535, sgw_port=65000):
+        self.mme = MME(mme_port, sgw_port, t0)
+        self.sgw = SGW(max_entry, sgw_port, mme_port, t0)
         self.enbs = []
         self.enb_signaling_ports = []
         self.add_enbs(enb_file_path, mme_port, sgw_port, t0)
         self.users = []
-        self.add_users(user_file_path)
+        self.add_users(user_file_path, t0)
         self.start_servers()
+        self.add_scenario(scenario_file_path)
 
 
     def add_enbs(self, file_path, mme_port, sgw_port, t0): # this function create enbs from json input file
@@ -30,7 +31,7 @@ class Topo:
             self.enb_signaling_ports.append(int(uid))
             self.enbs.append(ENB(uid, coordinate, mme_port, sgw_port, t0))
 
-    def add_users(self, file_path): # this function create users from json input file
+    def add_users(self, file_path, t0): # this function create users from json input file
         file = open(file_path)
         data = json.load(file)
         users = data["users"]
@@ -39,7 +40,18 @@ class Topo:
             locations = []
             for location in user_data["locations"]:
                 locations.append(tuple(map(int, location[1:-1].split(', '))))
-            self.users.append(User(user_data["id"], Float(user_data["interval"][:-1]), locations, self.enb_signaling_ports))
+            self.users.append(User(user_data["id"], Float(user_data["interval"][:-1]), locations, self.enb_signaling_ports, t0))
+
+    def add_scenario(self, file_path):
+        file = open(file_path)
+        data = json.load(file)
+        scenarios = data["scenarios"]
+        for scenario in scenarios:
+            scenario_data = data[scenario]
+            for user in self.users:
+                if user.id == scenario_data["source"]:
+                    threading.Thread(target=user.run_scenario, args=(scenario_data,)).start()
+                    break
 
     def start_servers(self): # this function starts servers on ENBs, MME and SGW
         t1 = threading.Thread(target=self.mme.start_server)

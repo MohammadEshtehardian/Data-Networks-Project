@@ -10,10 +10,11 @@ from time import sleep
 
 class MME:
 
-    def __init__(self, port, sgw_port):
+    def __init__(self, port, sgw_port, t0):
         self.enb_uids = {}
         self.port = port
         self.sgw_port = sgw_port
+        self.t0 = t0
         self.sgw_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # socket for connecting to SGW
         self.messages = {} # buffer distances that recieved from ENBs
         self.served_times = []

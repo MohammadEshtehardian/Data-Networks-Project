@@ -60,70 +60,74 @@ class ENB:
         # handling position announcement messages
         while True:
             data = str(c.recv(4096), 'utf-8')
-            data = json.loads(data)
-            if data["header"]["kind"] == "Position Announcement":
-                # extract data from message
-                id = data["payload"]["id"]
-                coordinate = data["payload"]["coordinate"]
-                distance = math.sqrt((self.coordinate[0]-coordinate[0])**2+(self.coordinate[1]-coordinate[1])**2)
-                self.users[id] = distance
-                self.users_sockets[id] = c
-                t = data["header"]["time"]
-                logging.info(f'eNodeB with uid {self.uid} got position of user with id {id} at time {t}.')
-                # send distance of the user to MME
-                data = {
-                    "header":{
-                        "uid": self.uid,
-                        "kind": "User Distance"
-                    },
-                    "payload":{
-                        "id": id,
-                        "distance": distance,
-                        "time": t
-                    }
-                }
-                data = json.dumps(data)
-                self.mme_socket.sendall(bytes(data, encoding='utf-8'))
-                time.sleep(random.uniform(0.5, 1))
-                self.mme_socket.sendall(bytes(data, encoding='utf-8'))
-                time.sleep(random.uniform(0, 0.5))
-                self.mme_socket.sendall(bytes(data, encoding='utf-8'))
-                logging.info(f'Message for announcing position of user with id {id} sends to MME from eNodeB with uid {self.uid}.')
-
-                def recieve():
-                    self.lock.acquire()
-                    data = str(self.mme_socket.recv(4096), 'utf-8')
-                    datas = data.split(';')
-                    for data in datas:
-                        if data == '':
-                            break
-                        data = json.loads(data)
-                        self.data_recieved_from_mme = data
-                        logging.info(f'MME set eNodeB with uid {self.uid} to get data from user with id {data["payload"]["id"]} at time {time.time()-self.t0}')
-                    self.lock.release()
-                    return
-
-                def send():
-                    self.lock.acquire()
-                    data = self.data_recieved_from_mme
+            datas = data.split(';')
+            for data in datas:
+                if data == '':
+                    break
+                data = json.loads(data.split(';')[0])
+                if data["header"]["kind"] == "Position Announcement":
+                    # extract data from message
                     id = data["payload"]["id"]
-                    time = data["payload"]["time"]
+                    coordinate = data["payload"]["coordinate"]
+                    distance = math.sqrt((self.coordinate[0]-coordinate[0])**2+(self.coordinate[1]-coordinate[1])**2)
+                    self.users[id] = distance
+                    self.users_sockets[id] = c
+                    t = data["header"]["time"]
+                    logging.info(f'eNodeB with uid {self.uid} got position of user with id {id} at time {t}.')
+                    # send distance of the user to MME
                     data = {
-                        "header": {
-                            "kind": "User-eNodeB Connection"
-                        },
-                        "payload": {
+                        "header":{
                             "uid": self.uid,
-                            "time": time
+                            "kind": "User Distance"
+                        },
+                        "payload":{
+                            "id": id,
+                            "distance": distance,
+                            "time": t
                         }
                     }
                     data = json.dumps(data)
-                    Thread(target=self.start_server, args=(int(self.uid)+1,)).start()
-                    self.users_sockets[id].sendall(bytes(data, 'utf-8'))
-                    logging.info(f'eNodeB with uid {self.uid} request for construction of data channel to user with id {id}.')
-                    self.lock.release()
-                Thread(target=recieve).start()
-                Thread(target=send).start()
+                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    time.sleep(random.uniform(0.5, 1))
+                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    time.sleep(random.uniform(0, 0.5))
+                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    logging.info(f'Message for announcing position of user with id {id} sends to MME from eNodeB with uid {self.uid}.')
+
+                    def recieve():
+                        self.lock.acquire()
+                        data = str(self.mme_socket.recv(4096), 'utf-8')
+                        datas = data.split(';')
+                        for data in datas:
+                            if data == '':
+                                break
+                            data = json.loads(data)
+                            self.data_recieved_from_mme = data
+                            logging.info(f'MME set eNodeB with uid {self.uid} to get data from user with id {data["payload"]["id"]} at time {time.time()-self.t0}')
+                        self.lock.release()
+                        return
+
+                    def send():
+                        self.lock.acquire()
+                        data = self.data_recieved_from_mme
+                        id = data["payload"]["id"]
+                        time = data["payload"]["time"]
+                        data = {
+                            "header": {
+                                "kind": "User-eNodeB Connection"
+                            },
+                            "payload": {
+                                "uid": self.uid,
+                                "time": time
+                            }
+                        }
+                        data = json.dumps(data)
+                        Thread(target=self.start_server, args=(int(self.uid)+1,)).start()
+                        self.users_sockets[id].sendall(bytes(data, 'utf-8'))
+                        logging.info(f'eNodeB with uid {self.uid} request for construction of data channel to user with id {id}.')
+                        self.lock.release()
+                    Thread(target=recieve).start()
+                    Thread(target=send).start()
 
             
 

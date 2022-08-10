@@ -8,9 +8,10 @@ import os
 
 class Simulation:
 
-    def __init__(self, T, max_entry, enb_file_path, user_file_path):
+    def __init__(self, T, max_entry, enb_file_path, user_file_path, scenario_file_path):
         t0 = time.time()
-        topo = Topo(max_entry, enb_file_path, user_file_path, t0)
+        topo = Topo(max_entry, enb_file_path, user_file_path, scenario_file_path, t0)
+        topo.add_scenario("scenarios.json")
         threading.Thread(target=topo.send_uid_to_mme_sgw).start()
         events = []
         for user in topo.users:
@@ -30,4 +31,4 @@ if __name__ == '__main__':
         logging.basicConfig(filename = sys.argv[2],
                             level = logging.INFO,
                             format = '%(levelname)s:%(message)s')
-    Simulation(20, 1, 'ENB.json', 'Users1.json')
+    Simulation(20, 1, 'ENB.json', 'Users1.json', 'scenarios.json')

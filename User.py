@@ -1,12 +1,15 @@
 from math import floor
+from prefixed import Float
 import socket
 import threading
 import json
 import logging
+import time
 
 class User:
 
-    def __init__(self, id, interval, locations, enb_signaling_ports):
+    def __init__(self, id, interval, locations, enb_signaling_ports, t0):
+        self.t0 = t0
         self.id = id
         self.interval = interval
         self.locations = locations
@@ -16,9 +19,7 @@ class User:
         self.lock = threading.Lock()
         for port in self.enb_signaling_ports:
             self.enb_signaling_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        self.enb_data_sockets = []
-        for port in self.enb_signaling_ports:
-            self.enb_data_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.enb_data_sockets = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.enb_conncted = ''
 
     def __str__(self):
@@ -29,6 +30,11 @@ class User:
             self.enb_signaling_sockets[i].connect(('127.0.0.1', port))
             logging.critical(f'User with id {self.id} connected to eNodeB on port {port}.')
         e.set()
+
+    def run_scenario(self, scenario):
+        while True:
+            if time.time() - self.t0 >= Float(scenario["when"][:-1]):
+                pass
 
     def position_announcement(self, time, e):
         e.wait()
@@ -48,7 +54,7 @@ class User:
                     }
                 }
                 data = json.dumps(data)
-                s.sendall(bytes(data, encoding='utf-8'))
+                s.sendall(bytes(data + ';', encoding='utf-8'))
 
                 def get_data_channel_message():
                     data = str(s.recv(4096), 'utf-8')
@@ -57,7 +63,7 @@ class User:
                         self.enb_conncted = data["payload"]["uid"]
                         for j in range(len(self.enb_signaling_ports)):
                             if int(data["payload"]["uid"]) == self.enb_signaling_ports[j]:
-                                self.enb_data_sockets[j].connect(('127.0.0.1', self.enb_signaling_ports[j]+1))
+                                self.enb_data_sockets.connect(('127.0.0.1', self.enb_signaling_ports[j]+1))
 
                 threading.Thread(target=get_data_channel_message).start()
 
