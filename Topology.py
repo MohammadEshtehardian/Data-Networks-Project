@@ -9,18 +9,18 @@ from User import User
 
 class Topo:
 
-    def __init__(self, max_entry, enb_file_path, user_file_path, mme_port=65535, sgw_port=65000):
+    def __init__(self, max_entry, enb_file_path, user_file_path, t0, mme_port=65535, sgw_port=65000):
         self.mme = MME(mme_port, sgw_port)
         self.sgw = SGW(max_entry, sgw_port, mme_port)
         self.enbs = []
         self.enb_signaling_ports = []
-        self.add_enbs(enb_file_path, mme_port, sgw_port)
+        self.add_enbs(enb_file_path, mme_port, sgw_port, t0)
         self.users = []
         self.add_users(user_file_path)
         self.start_servers()
 
 
-    def add_enbs(self, file_path, mme_port, sgw_port): # this function create enbs from json input file
+    def add_enbs(self, file_path, mme_port, sgw_port, t0): # this function create enbs from json input file
         file = open(file_path)
         data = json.load(file)
         number_of_enbs = len(data["eNodeBsLocation"])
@@ -28,7 +28,7 @@ class Topo:
             coordinate = tuple(map(int, coordinate_str[1:-1].split(', ')))
             uid = str(int((i+1)*20000/number_of_enbs))
             self.enb_signaling_ports.append(int(uid))
-            self.enbs.append(ENB(uid, coordinate, mme_port, sgw_port))
+            self.enbs.append(ENB(uid, coordinate, mme_port, sgw_port, t0))
 
     def add_users(self, file_path): # this function create users from json input file
         file = open(file_path)

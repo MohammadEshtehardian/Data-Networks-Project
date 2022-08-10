@@ -16,6 +16,10 @@ class User:
         self.lock = threading.Lock()
         for port in self.enb_signaling_ports:
             self.enb_signaling_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.enb_data_sockets = []
+        for port in self.enb_signaling_ports:
+            self.enb_data_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        self.enb_conncted = ''
 
     def __str__(self):
         return f"user id is: {self.id}\nuser interval is: {self.interval}\nuser locations is: {self.locations}"
@@ -45,4 +49,16 @@ class User:
                 }
                 data = json.dumps(data)
                 s.sendall(bytes(data, encoding='utf-8'))
+
+                def get_data_channel_message():
+                    data = str(s.recv(4096), 'utf-8')
+                    data = json.loads(data)
+                    if data["header"]["kind"] == "User-eNodeB Connection" and not self.enb_conncted == data["payload"]["uid"]:
+                        self.enb_conncted = data["payload"]["uid"]
+                        for j in range(len(self.enb_signaling_ports)):
+                            if int(data["payload"]["uid"]) == self.enb_signaling_ports[j]:
+                                self.enb_data_sockets[j].connect(('127.0.0.1', self.enb_signaling_ports[j]+1))
+
+                threading.Thread(target=get_data_channel_message).start()
+
         self.lock.release()
