@@ -12,6 +12,7 @@ class Simulation:
         t0 = time.time()
         topo = Topo(max_entry, enb_file_path, user_file_path, scenario_file_path, t0)
         topo.add_scenario("scenarios.json")
+        threading.Thread(target=topo.connect_sgw_mme).start()
         threading.Thread(target=topo.send_uid_to_mme_sgw).start()
         events = []
         for user in topo.users:
@@ -21,6 +22,7 @@ class Simulation:
         while time.time() - t0 <= T:
             for i, user in enumerate(topo.users):
                 threading.Thread(target=user.position_announcement, args=(time.time()-t0, events[i])).start()
+            time.sleep(0.5)
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1]=='INFO':
@@ -31,4 +33,4 @@ if __name__ == '__main__':
         logging.basicConfig(filename = sys.argv[2],
                             level = logging.INFO,
                             format = '%(levelname)s:%(message)s')
-    Simulation(20, 1, 'ENB.json', 'Users1.json', 'scenarios.json')
+    Simulation(20, 100, 'ENB.json', 'Users1.json', 'scenarios.json')

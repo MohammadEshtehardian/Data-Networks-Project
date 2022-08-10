@@ -9,7 +9,7 @@ from User import User
 
 class Topo:
 
-    def __init__(self, max_entry, enb_file_path, user_file_path, scenario_file_path, t0, mme_port=65535, sgw_port=65000):
+    def __init__(self, max_entry, enb_file_path, user_file_path, scenario_file_path, t0, mme_port=50000, sgw_port=65000):
         self.mme = MME(mme_port, sgw_port, t0)
         self.sgw = SGW(max_entry, sgw_port, mme_port, t0)
         self.enbs = []

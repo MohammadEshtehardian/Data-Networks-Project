@@ -19,7 +19,7 @@ class User:
         self.lock = threading.Lock()
         for port in self.enb_signaling_ports:
             self.enb_signaling_sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        self.enb_data_sockets = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.enb_data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.enb_conncted = ''
 
     def __str__(self):
@@ -34,7 +34,23 @@ class User:
     def run_scenario(self, scenario):
         while True:
             if time.time() - self.t0 >= Float(scenario["when"][:-1]):
-                pass
+                data = {
+                    "header": {
+                        "kind": "Session Creation"
+                    },
+                    "payload": {
+                        "src": self.id,
+                        "dest": scenario["dst"]
+                    }
+                }
+                data = json.dumps(data)
+                try:
+                    self.enb_data_socket.sendall(bytes(data, 'utf-8'))
+                except:
+                    time.sleep(3)
+                    self.enb_data_socket.sendall(bytes(data, 'utf-8'))
+                logging.info(f'User with id {self.id} wants a session with user with id {scenario["dst"]}')
+                break
 
     def position_announcement(self, time, e):
         e.wait()
@@ -63,8 +79,8 @@ class User:
                         self.enb_conncted = data["payload"]["uid"]
                         for j in range(len(self.enb_signaling_ports)):
                             if int(data["payload"]["uid"]) == self.enb_signaling_ports[j]:
-                                self.enb_data_sockets.connect(('127.0.0.1', self.enb_signaling_ports[j]+1))
+                                self.enb_data_socket.connect(('127.0.0.1', self.enb_signaling_ports[j]+1))
+                                break
 
                 threading.Thread(target=get_data_channel_message).start()
-
         self.lock.release()

@@ -87,11 +87,11 @@ class ENB:
                         }
                     }
                     data = json.dumps(data)
-                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    self.mme_socket.sendall(bytes(data+';', encoding='utf-8'))
                     time.sleep(random.uniform(0.5, 1))
-                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    self.mme_socket.sendall(bytes(data+';', encoding='utf-8'))
                     time.sleep(random.uniform(0, 0.5))
-                    self.mme_socket.sendall(bytes(data, encoding='utf-8'))
+                    self.mme_socket.sendall(bytes(data+';', encoding='utf-8'))
                     logging.info(f'Message for announcing position of user with id {id} sends to MME from eNodeB with uid {self.uid}.')
 
                     def recieve():
@@ -129,6 +129,16 @@ class ENB:
                     Thread(target=recieve).start()
                     Thread(target=send).start()
 
+
+    def session_creation(self, c):
+        datas = []
+        while True:
+            data = str(c.recv(4096), 'utf-8')
+            if data not in datas:
+                datas.append(data)
+                self.sgw_socket.sendall(bytes(data, 'utf-8'))
+                logging.info(f'eNodeB with uid {self.uid} sends session creation request to SGW.')
+
             
 
     def start_server(self, port=-1):
@@ -145,4 +155,6 @@ class ENB:
                 c, addr = s.accept()
                 if port == int(self.uid):
                     Thread(target=self.position_announcement, args=(c,)).start()
+                else:
+                    Thread(target=self.session_creation, args=(c,)).start()
             

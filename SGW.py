@@ -1,6 +1,7 @@
+from ast import arg
 import socket
 import json
-from threading import Thread
+from threading import Thread, Lock
 import logging
 
 class SGW:
@@ -14,6 +15,7 @@ class SGW:
         self.port = port
         self.mme_port = mme_port
         self.mme_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # socket for connecting to MME
+        self.lock = Lock()
 
     def __str__(self):
         return f"ENBs are: {self.uids}\nMaximum number of entries in the routing table is: {self.max_entry}\nRouting Table:\n{self.routing_table}"
@@ -28,6 +30,24 @@ class SGW:
                 self.enb_uids.append(uid)
                 logging.info(f'SGW added eNodeB with uid {uid} to its eNodebs list.')
 
+    def session_creation(self, c):
+        while True:
+            data = str(c.recv(4096), 'utf-8')
+            data = json.loads(data)
+            if data["header"]["kind"] == "Session Creation":
+                if data["payload"]["dest"] not in list(self.routing_table.keys()):
+                    ask_route = {
+                        "header": {
+                            "kind": "ASK Route"
+                        },
+                        "payload": {
+                            "dest":  data["payload"]["dest"]
+                        }
+                    }
+                    ask_route = json.dumps(ask_route)
+                    print(self.mme_socket)
+                    self.mme_socket.sendall(bytes(ask_route, 'utf-8'))
+
     def start_server(self):
         # starting server
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -37,11 +57,10 @@ class SGW:
         while True:
             c, addr = s.accept()
             Thread(target=self.ENB_SGW_connection, args=(c,)).start()
+            Thread(target=self.session_creation, args=(c,)).start()
     
     def connect_mme(self):
         # connect to MME
-        try:
-            self.mme_socket.connect(('127.0.0.1', self.mme_port))
-            logging.critical('SGW connected to MME.')
-        except:
-            logging.error('SGW cannot connect to MME!!!')
+        self.mme_socket.connect(('127.0.0.1', self.mme_port))
+        self.mme_socket.sendall(bytes(json.dumps({"header": {"kind": "Bye"}, "payload":"Hi"}), 'utf-8'))
+        logging.critical('SGW connected to MME.')
